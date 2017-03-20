@@ -35,6 +35,7 @@
 
 #include "csscolorparser.hpp"
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 #include <regex>
 #include <vector>
@@ -57,9 +58,9 @@ std::mutex SceneLoader::m_textureMutex;
 bool SceneLoader::loadScene(const std::shared_ptr<Platform>& _platform, std::shared_ptr<Scene> _scene,
                             const std::vector<SceneUpdate>& _updates, SceneUpdateErrorCallback _onSceneUpdateError) {
 
-    Importer sceneImporter(_scene);
+    Importer sceneImporter;
 
-    _scene->config() = sceneImporter.applySceneImports(_platform);
+    _scene->config() = sceneImporter.applySceneImports(_platform, _scene);
 
     if (!_scene->config()) {
         return false;
@@ -73,6 +74,8 @@ bool SceneLoader::loadScene(const std::shared_ptr<Platform>& _platform, std::sha
     _scene->fontContext()->loadFonts();
 
     applyConfig(_platform, _scene);
+
+    _scene->sceneAssets().clear();
 
     return true;
 }
@@ -582,10 +585,8 @@ std::shared_ptr<Texture> SceneLoader::fetchTexture(const std::shared_ptr<Platfor
     std::smatch match;
 
     auto& asset = scene->sceneAssets()[url];
-    if (!asset) {
-        LOGE("No asset found for url: %s", url.c_str());
-        return nullptr;
-    }
+    // asset must exist for this path (must be created during scene importing)
+    assert(asset);
 
     // TODO: generalize using URI handlers
     if (std::regex_search(url, match, r) && !asset->zipHandle()) {
@@ -753,10 +754,8 @@ void loadFontDescription(const std::shared_ptr<Platform>& platform, const Node& 
     std::smatch match;
 
     auto& asset = scene->sceneAssets()[_ft.uri];
-    if (!asset) {
-        LOGE("No asset found for url: %s", _ft.uri.c_str());
-        return;
-    }
+    // asset must exist for this path (must be created during scene importing)
+    assert(asset);
 
     if (std::regex_search(uri, match, regex) && !asset->zipHandle()) {
         // Load remote
