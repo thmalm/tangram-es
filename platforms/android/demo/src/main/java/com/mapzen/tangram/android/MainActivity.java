@@ -58,7 +58,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     PresetSelectionTextView sceneSelector;
 
-    String pointStylingPath = "layers.touch.point.draw.icons";
+    //String pointStylingPath = "layers.touch.point.draw.icons";
+    String stringVariable = "testValue";
+    String pointStylingPath = "{ style: 'text', text_wrap: 18, max_lines: 3 ,text_source: \"function() { return '"+ stringVariable+"'; }\", collide: true,offset: [0px, -12px] ,font: { size: 10px, fill: '#ffffff', stroke: { color: '#000000', width: 2px } } }";
     ArrayList<Marker> pointMarkers = new ArrayList<Marker>();
 
     boolean showTileInfo = false;
@@ -173,7 +175,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             markers.addPolyline(line, props);
 
             Marker p = map.addMarker();
-            p.setStylingFromPath(pointStylingPath);
+            //p.setStylingFromPath(pointStylingPath);
+            p.setStylingFromString(pointStylingPath);
             p.setPoint(tappedPoint);
             pointMarkers.add(p);
         }
