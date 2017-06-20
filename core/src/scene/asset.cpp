@@ -1,6 +1,7 @@
 #include "scene/asset.h"
 #include "platform.h"
 #include "log.h"
+#include "util/url.h"
 
 // Define MINIZ_NO_ZLIB_APIS to remove all ZLIB-style compression/decompression API's.
 #define MINIZ_NO_ZLIB_APIS
@@ -11,6 +12,7 @@
 
 #include <unordered_map>
 #include <tuple>
+#include <miniz/miniz.h>
 
 namespace Tangram {
 
@@ -20,7 +22,6 @@ struct ZipHandle {
     std::unordered_map<std::string, std::pair<unsigned int, size_t>> fileInfo;
 
     // Path to the zip bundle (helps in resolving zip resource path)
-    std::string bundlePath = "";
     std::vector<char> data;
 };
 
@@ -77,7 +78,7 @@ void ZippedAsset::buildZipHandle(std::vector<char>& zipData) {
     }
 
     auto lastPathSegment = m_name.rfind('/');
-    m_zipHandle->bundlePath = (lastPathSegment == std::string::npos) ? "" : m_name.substr(0, lastPathSegment+1);
+    auto bundlePath = Url((lastPathSegment == std::string::npos) ? "" : m_name.substr(0, lastPathSegment+1));
 
     /* Instead of using mz_zip_reader_locate_file, maintaining a map of file name to index,
      * for performance reasons.
@@ -90,22 +91,23 @@ void ZippedAsset::buildZipHandle(std::vector<char>& zipData) {
             LOGE("ZippedAssetPackage: Could not read file stats: %s", st.m_filename);
             continue;
         }
+        Url filePath(st.m_filename);
+        filePath = filePath.resolved(Url(bundlePath));
         if (isBaseSceneYaml(st.m_filename)) {
-            m_name = m_zipHandle->bundlePath + st.m_filename;
+            m_name = filePath.string();
         }
-        m_zipHandle->fileInfo[st.m_filename] = std::pair<unsigned int, size_t>(i, st.m_uncomp_size);
+        m_zipHandle->fileInfo[filePath.string()] = std::pair<unsigned int, size_t>(i, st.m_uncomp_size);
     }
 }
 
 bool ZippedAsset::bytesFromAsset(const std::string& filePath, std::function<char*(size_t)> allocator) const{
 
-    auto pos = filePath.find(m_zipHandle->bundlePath);
-    if (pos != 0) {
+    if (m_zipHandle->fileInfo.find(filePath) == m_zipHandle->fileInfo.end()) {
         LOGE("Invalid asset path: %s", m_name.c_str());
         return false;
     }
 
-    auto resourcePath = filePath.substr(m_zipHandle->bundlePath.size());
+    auto resourcePath = filePath;
     if (*resourcePath.begin() == '/') { resourcePath.erase(resourcePath.begin()); }
 
     if (m_zipHandle->archiveHandle) {
