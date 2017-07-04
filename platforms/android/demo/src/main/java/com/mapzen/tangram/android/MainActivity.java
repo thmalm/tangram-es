@@ -2,6 +2,7 @@ package com.mapzen.tangram.android;
 
 import android.graphics.PointF;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Window;
@@ -63,6 +64,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     boolean showTileInfo = false;
 
+    private static final int FINISH_ACTIVITY_DELAY = 3000; // ms
+    private Handler handler = new Handler();
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -103,12 +107,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onResume() {
         super.onResume();
         view.onResume();
+
+        if (FINISH_ACTIVITY_DELAY != 0) {
+
+            handler.postDelayed(finishRunnable, FINISH_ACTIVITY_DELAY);
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
         view.onPause();
+
+        handler.removeCallbacks(finishRunnable);
     }
 
     @Override
@@ -123,6 +134,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         view.onLowMemory();
     }
 
+    private Runnable finishRunnable = new Runnable() {
+
+        @Override
+        public void run() {
+
+            finish();
+        }
+    };
 
     @Override
     public void onMapReady(MapController mapController) {
